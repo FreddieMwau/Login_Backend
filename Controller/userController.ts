@@ -5,6 +5,7 @@ import sqlConfig from '../config/config'
 import bcrypt from 'bcrypt'
 import { registerSchema } from '../Helpers/registrationValidator'
 import { loginSchema } from '../Helpers/loginValidator'
+import { resetPasswordSchema } from '../Helpers/resetPasswordValidator'
 
 // Creates a new user
 export const createUser = async (req: Request, res:Response, next:NextFunction) => {
@@ -120,11 +121,8 @@ export const loginUser : RequestHandler = async(req, res) => {
             return res.json({error: error.details[0].message})
         }
         const user = await pool.request()
-        .query(`
-            SELECT fullname,email,password from Users
-            WHERE email='${email}'
-        `)
-
+        .input('email', mssql.VarChar, email)
+        .execute('getUsersEmailPsswrd')
         const validatePassword = await bcrypt.compare(password, user.recordset[0].password)
 
         if (!validatePassword) {
@@ -139,5 +137,38 @@ export const loginUser : RequestHandler = async(req, res) => {
             data})
     } catch (error:any){
         res.json({ error: error.message })
+    }
+}
+
+// Resets user Password
+export const resetPassword : RequestHandler = async (req, res) => {
+    try{
+        const id = req.params.id
+        const {password} = req.body as {password: string}
+        let pool = await mssql.connect(sqlConfig)
+        const user = await pool.request()
+        .input('id', mssql.VarChar, id)
+        .execute('getUserById')
+        // check if userId exists
+        if (!user.recordset[0]) {
+            return res.json({ message: `User with id: ${id} does not exist` })
+        }
+        
+        // validate the new password is set to standards
+        const {error} = resetPasswordSchema.validate(req.body)
+        if(error){
+            return res.json({error: error.details[0].message})
+        }
+
+        // hash the new password
+        const hashedPassword = await bcrypt.hash(password, 15)
+        await pool.request()
+        .input('id', mssql.VarChar, id)
+        .input('password', mssql.VarChar, hashedPassword)
+        .execute('resetNewPassword')
+        res.status(200).json({"message": "Password reset successfully"});
+
+    } catch (error:any){
+        res.json({error: error.message})
     }
 }

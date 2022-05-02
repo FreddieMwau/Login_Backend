@@ -11,6 +11,6 @@ router.post('/login', userController_1.loginUser);
 router.get('/', userController_1.getUsers);
 router.get('/:email', userController_1.getUserByUsername);
 router.put('/:id', userController_1.updateUser);
-// router.patch('/:id', resetPassword)
+router.patch('/:id', userController_1.resetPassword);
 router.delete('/:id', userController_1.deleteUser);
 exports.default = router;

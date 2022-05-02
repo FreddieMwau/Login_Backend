@@ -23,13 +23,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginUser = exports.deleteUser = exports.updateUser = exports.getUserByUsername = exports.getUsers = exports.createUser = void 0;
+exports.resetPassword = exports.loginUser = exports.deleteUser = exports.updateUser = exports.getUserByUsername = exports.getUsers = exports.createUser = void 0;
 const uuid_1 = require("uuid");
 const mssql_1 = __importDefault(require("mssql"));
 const config_1 = __importDefault(require("../config/config"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const registrationValidator_1 = require("../Helpers/registrationValidator");
 const loginValidator_1 = require("../Helpers/loginValidator");
+const resetPasswordValidator_1 = require("../Helpers/resetPasswordValidator");
 // Creates a new user
 const createUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -146,10 +147,8 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return res.json({ error: error.details[0].message });
         }
         const user = yield pool.request()
-            .query(`
-            SELECT fullname,email,password from Users
-            WHERE email='${email}'
-        `);
+            .input('email', mssql_1.default.VarChar, email)
+            .execute('getUsersEmailPsswrd');
         const validatePassword = yield bcrypt_1.default.compare(password, user.recordset[0].password);
         if (!validatePassword) {
             return res.json({ message: "Invalid credentials." });
@@ -167,3 +166,34 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.loginUser = loginUser;
+// Resets user Password
+const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const id = req.params.id;
+        const { password } = req.body;
+        let pool = yield mssql_1.default.connect(config_1.default);
+        const user = yield pool.request()
+            .input('id', mssql_1.default.VarChar, id)
+            .execute('getUserById');
+        // check if userId exists
+        if (!user.recordset[0]) {
+            return res.json({ message: `User with id: ${id} does not exist` });
+        }
+        // validate the new password is set to standards
+        const { error } = resetPasswordValidator_1.resetPasswordSchema.validate(req.body);
+        if (error) {
+            return res.json({ error: error.details[0].message });
+        }
+        // hash the new password
+        const hashedPassword = yield bcrypt_1.default.hash(password, 15);
+        yield pool.request()
+            .input('id', mssql_1.default.VarChar, id)
+            .input('password', mssql_1.default.VarChar, hashedPassword)
+            .execute('resetNewPassword');
+        res.status(200).json({ "message": "Password reset successfully" });
+    }
+    catch (error) {
+        res.json({ error: error.message });
+    }
+});
+exports.resetPassword = resetPassword;
