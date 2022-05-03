@@ -1,13 +1,17 @@
 import express from 'express'
-import { createUser, deleteUser, getUserByUsername, getUsers, loginUser, resetPassword, updateUser } from '../Controller/userController'
+import { createUser, deleteUser, getUserByUsername, getUsers, loginUser, homepage, resetPassword, updateUser } from '../Controller/userController'
+import { verifyToken } from '../Middleware/verify'
 const router=express.Router()
 
 router.post('/create', createUser)
 router.post('/login', loginUser)
 router.get('/', getUsers)
+router.get('/home', homepage)
 router.get('/:email', getUserByUsername)
 router.put('/:id', updateUser)
 router.patch('/:id', resetPassword)
-router.delete('/:id', deleteUser)
+router.delete('/:id', verifyToken, deleteUser)
+
+// router.get('/dashBoard', dashBoard )
 
 export default router

@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPassword = exports.loginUser = exports.deleteUser = exports.updateUser = exports.getUserByUsername = exports.getUsers = exports.createUser = void 0;
+exports.homepage = exports.homeActivity = exports.resetPassword = exports.loginUser = exports.deleteUser = exports.updateUser = exports.getUserByUsername = exports.getUsers = exports.createUser = void 0;
 const uuid_1 = require("uuid");
 const mssql_1 = __importDefault(require("mssql"));
 const config_1 = __importDefault(require("../config/config"));
@@ -31,6 +31,9 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const registrationValidator_1 = require("../Helpers/registrationValidator");
 const loginValidator_1 = require("../Helpers/loginValidator");
 const resetPasswordValidator_1 = require("../Helpers/resetPasswordValidator");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 // Creates a new user
 const createUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -82,7 +85,7 @@ const getUserByUsername = (req, res, next) => __awaiter(void 0, void 0, void 0, 
             .input('email', mssql_1.default.VarChar, email)
             .execute('getUsersByUserName');
         if (!user.recordset[0]) { //accessing the first record set
-            return res.json({ message: `User with username : ${email} does not exist` });
+            return res.json({ message: `User -test with username : ${email} does not exist` });
         }
         return res.json(user.recordset);
     }
@@ -116,6 +119,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.updateUser = updateUser;
 // Deletes user by id
+// Protected this route only to delete user with jwt decoded
 const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const id = req.params.id;
@@ -129,7 +133,9 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         yield pool.request()
             .input('id', mssql_1.default.VarChar, id)
             .execute('deleteUsers');
-        res.json({ message: "User deleted successfully" });
+        // const {users} = req as {users:any}
+        console.log("==============> DeletedBy" + req.body.users.recordset[0].fullname);
+        res.json({ message: "User deleted successfully", deletedBy: req.body.users.recordset[0].fullname });
     }
     catch (error) {
         res.json({ error: error.message });
@@ -137,6 +143,7 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.deleteUser = deleteUser;
 // Login User to Platform
+// Assign users JWT b4 login success
 const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         let pool = yield mssql_1.default.connect(config_1.default);
@@ -146,10 +153,12 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (error) {
             return res.json({ error: error.details[0].message });
         }
-        const user = yield pool.request()
+        // console.log("===========> Reaching here");
+        let user = yield pool.request()
             .input('email', mssql_1.default.VarChar, email)
             .execute('getUsersEmailPsswrd');
         const validatePassword = yield bcrypt_1.default.compare(password, user.recordset[0].password);
+        // console.log("===========> Reaching here 2");
         if (!validatePassword) {
             return res.json({ message: "Invalid credentials." });
         }
@@ -158,8 +167,12 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             const { password } = record, rest = __rest(record, ["password"]);
             return rest;
         });
+        // used the user as the payload since it runs the same storedProcedure
+        user = user.recordset[0];
+        // 1st payload, 2nd secretkey & 3rd token
+        const token = jsonwebtoken_1.default.sign(user, process.env.SECRET_KEY, { expiresIn: '3m' });
         res.json({ message: "Logged in successfully",
-            data });
+            data, token });
     }
     catch (error) {
         res.json({ error: error.message });
@@ -197,3 +210,12 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.resetPassword = resetPassword;
+const homeActivity = (req, res) => {
+    console.log("=======>Reaching here7");
+    res.json({ message: "Hello user welcome to the homepage..." });
+};
+exports.homeActivity = homeActivity;
+const homepage = (req, res) => {
+    res.json({ message: 'Hello Jonathan Welcome..' });
+};
+exports.homepage = homepage;

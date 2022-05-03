@@ -6,6 +6,13 @@ import bcrypt from 'bcrypt'
 import { registerSchema } from '../Helpers/registrationValidator'
 import { loginSchema } from '../Helpers/loginValidator'
 import { resetPasswordSchema } from '../Helpers/resetPasswordValidator'
+import jwt from 'jsonwebtoken'
+import dotenv from 'dotenv'
+dotenv.config()
+
+interface RequestExtended extends Request {
+    users?: any
+}
 
 // Creates a new user
 export const createUser = async (req: Request, res:Response, next:NextFunction) => {
@@ -48,6 +55,7 @@ export const getUsers: RequestHandler = async (req, res, next) => {
     }
 }
 
+
 // Gets user by email address
 export const getUserByUsername: RequestHandler<{email:string}> = async (req, res, next) => {
     try{
@@ -57,7 +65,7 @@ export const getUserByUsername: RequestHandler<{email:string}> = async (req, res
         .input('email', mssql.VarChar, email)
         .execute('getUsersByUserName')
         if(!user.recordset[0]){ //accessing the first record set
-            return res.json({message: `User with username : ${email} does not exist`})
+            return res.json({message: `User -test with username : ${email} does not exist`})
         }
         return res.json(user.recordset)
     } catch (error : any){
@@ -91,7 +99,8 @@ export const updateUser: RequestHandler<{id:string}> = async (req, res) =>{
 }
 
 // Deletes user by id
-export const deleteUser : RequestHandler<{ id: string }> = async (req, res) => {
+// Protected this route only to delete user with jwt decoded
+export const deleteUser = async (req: RequestExtended, res: Response) => {
     try{
         const id = req.params.id
         let pool = await mssql.connect(sqlConfig)
@@ -104,13 +113,17 @@ export const deleteUser : RequestHandler<{ id: string }> = async (req, res) => {
         await pool.request()
         .input('id', mssql.VarChar, id)
         .execute('deleteUsers')
-        res.json({ message: "User deleted successfully" })
+        // const {users} = req as {users:any}
+        console.log("==============> DeletedBy" + req.body.users.recordset[0].fullname);
+        res.json({ message: "User deleted successfully", deletedBy: req.body.users.recordset[0].fullname})
+        
     } catch(error: any){
         res.json({ error: error.message })
     }
 }
 
 // Login User to Platform
+// Assign users JWT b4 login success
 export const loginUser : RequestHandler = async(req, res) => {
     try {
         let pool = await mssql.connect(sqlConfig)
@@ -120,11 +133,13 @@ export const loginUser : RequestHandler = async(req, res) => {
         if (error) {
             return res.json({error: error.details[0].message})
         }
-        const user = await pool.request()
+        // console.log("===========> Reaching here");
+        
+        let user = await pool.request()
         .input('email', mssql.VarChar, email)
         .execute('getUsersEmailPsswrd')
         const validatePassword = await bcrypt.compare(password, user.recordset[0].password)
-
+        // console.log("===========> Reaching here 2");
         if (!validatePassword) {
             return res.json({ message: "Invalid credentials." })
         }
@@ -133,8 +148,15 @@ export const loginUser : RequestHandler = async(req, res) => {
             const{password, ...rest} =  record
             return rest
         })
+       
+        // used the user as the payload since it runs the same storedProcedure
+        user = user.recordset[0]
+
+        // 1st payload, 2nd secretkey & 3rd token
+        const token = jwt.sign(user, process.env.SECRET_KEY as string,  {expiresIn:'3m'})
+
         res.json({message:"Logged in successfully",
-            data})
+            data, token})
     } catch (error:any){
         res.json({ error: error.message })
     }
@@ -171,4 +193,17 @@ export const resetPassword : RequestHandler = async (req, res) => {
     } catch (error:any){
         res.json({error: error.message})
     }
+}
+
+
+
+
+export const homeActivity: RequestHandler = (req, res) => {
+    console.log("=======>Reaching here7");
+    res.json({ message: "Hello user welcome to the homepage..." })
+}
+
+export const homepage: RequestHandler = (req, res) => {
+    res.json({ message: 'Hello Jonathan Welcome..' })
+
 }
