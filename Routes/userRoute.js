@@ -10,7 +10,7 @@ const router = express_1.default.Router();
 router.post('/create', userController_1.createUser);
 router.post('/login', userController_1.loginUser);
 router.get('/', userController_1.getUsers);
-router.get('/home', userController_1.homepage);
+router.get('/home', verify_1.verifyToken, userController_1.homepage);
 router.get('/:email', userController_1.getUserByUsername);
 router.put('/:id', userController_1.updateUser);
 router.patch('/:id', userController_1.resetPassword);

@@ -107,7 +107,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.json({ message: `User with id : ${id} does not exist` });
         }
         yield pool.request()
-            .input('id', mssql_1.default.VarChar, id)
+            // .input('id', mssql.VarChar, id)
             .input('fullname', mssql_1.default.VarChar, fullname)
             .input('email', mssql_1.default.VarChar, email)
             .execute('updateUser');
@@ -170,7 +170,7 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // used the user as the payload since it runs the same storedProcedure
         user = user.recordset[0];
         // 1st payload, 2nd secretkey & 3rd token
-        const token = jsonwebtoken_1.default.sign(user, process.env.SECRET_KEY, { expiresIn: '3m' });
+        const token = jsonwebtoken_1.default.sign(user, process.env.SECRET_KEY, { expiresIn: '10m' });
         res.json({ message: "Logged in successfully",
             data, token });
     }
@@ -216,6 +216,6 @@ const homeActivity = (req, res) => {
 };
 exports.homeActivity = homeActivity;
 const homepage = (req, res) => {
-    res.json({ message: 'Hello Jonathan Welcome..' });
+    res.json({ message: `Hello user Welcome..` });
 };
 exports.homepage = homepage;

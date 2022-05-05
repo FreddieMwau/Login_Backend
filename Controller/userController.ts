@@ -87,7 +87,7 @@ export const updateUser: RequestHandler<{id:string}> = async (req, res) =>{
         }
 
         await pool.request()
-            .input('id', mssql.VarChar, id)
+            // .input('id', mssql.VarChar, id)
             .input('fullname', mssql.VarChar, fullname)
             .input('email', mssql.VarChar, email)
             .execute('updateUser')
@@ -151,9 +151,8 @@ export const loginUser : RequestHandler = async(req, res) => {
        
         // used the user as the payload since it runs the same storedProcedure
         user = user.recordset[0]
-
         // 1st payload, 2nd secretkey & 3rd token
-        const token = jwt.sign(user, process.env.SECRET_KEY as string,  {expiresIn:'3m'})
+        const token = jwt.sign(user, process.env.SECRET_KEY as string,  {expiresIn:'10m'})
 
         res.json({message:"Logged in successfully",
             data, token})
@@ -204,6 +203,6 @@ export const homeActivity: RequestHandler = (req, res) => {
 }
 
 export const homepage: RequestHandler = (req, res) => {
-    res.json({ message: 'Hello Jonathan Welcome..' })
+    res.json({ message: `Hello user Welcome..` })
 
 }
