@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.homepage = exports.homeActivity = exports.resetPassword = exports.loginUser = exports.deleteUser = exports.updateUser = exports.getUserByUsername = exports.getUsers = exports.createUser = void 0;
+exports.homepage = exports.resetPassword = exports.loginUser = exports.deleteUser = exports.updateUser = exports.getUserByUsername = exports.getUsers = exports.createUser = void 0;
 const uuid_1 = require("uuid");
 const mssql_1 = __importDefault(require("mssql"));
 const config_1 = __importDefault(require("../config/config"));
@@ -134,8 +134,8 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             .input('id', mssql_1.default.VarChar, id)
             .execute('deleteUsers');
         // const {users} = req as {users:any}
-        console.log("==============> DeletedBy" + req.body.users.recordset[0].fullname);
-        res.json({ message: "User deleted successfully", deletedBy: req.body.users.recordset[0].fullname });
+        // console.log("==============> DeletedBy" + req.body.users.recordset[0].fullname);
+        res.json({ message: "User deleted successfully", deletedBy: req.body.users.fullname });
     }
     catch (error) {
         res.json({ error: error.message });
@@ -158,7 +158,6 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             .input('email', mssql_1.default.VarChar, email)
             .execute('getUsersEmailPsswrd');
         const validatePassword = yield bcrypt_1.default.compare(password, user.recordset[0].password);
-        // console.log("===========> Reaching here 2");
         if (!validatePassword) {
             return res.json({ message: "Invalid credentials." });
         }
@@ -167,12 +166,12 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             const { password } = record, rest = __rest(record, ["password"]);
             return rest;
         });
+        // const data = await (await pool.request().query('select id, fullname, email from Users ')).recordset[0]
         // used the user as the payload since it runs the same storedProcedure
-        user = user.recordset[0];
+        // user = user.recordset[0]
         // 1st payload, 2nd secretkey & 3rd token
-        const token = jsonwebtoken_1.default.sign(user, process.env.SECRET_KEY, { expiresIn: '10m' });
-        res.json({ message: "Logged in successfully",
-            data, token });
+        const token = jsonwebtoken_1.default.sign(user.recordset[0], process.env.SECRET_KEY);
+        res.json({ message: "Logged in successfully", token });
     }
     catch (error) {
         res.json({ error: error.message });
@@ -210,12 +209,7 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.resetPassword = resetPassword;
-const homeActivity = (req, res) => {
-    console.log("=======>Reaching here7");
-    res.json({ message: "Hello user welcome to the homepage..." });
-};
-exports.homeActivity = homeActivity;
 const homepage = (req, res) => {
-    res.json({ message: `Hello user Welcome..` });
+    res.json({ message: `Hello user ${req.body.users.fullname} Welcome..` });
 };
 exports.homepage = homepage;

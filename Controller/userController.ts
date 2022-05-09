@@ -100,7 +100,7 @@ export const updateUser: RequestHandler<{id:string}> = async (req, res) =>{
 
 // Deletes user by id
 // Protected this route only to delete user with jwt decoded
-export const deleteUser = async (req: RequestExtended, res: Response) => {
+export const deleteUser = async (req:RequestExtended, res:Response) => {
     try{
         const id = req.params.id
         let pool = await mssql.connect(sqlConfig)
@@ -114,8 +114,8 @@ export const deleteUser = async (req: RequestExtended, res: Response) => {
         .input('id', mssql.VarChar, id)
         .execute('deleteUsers')
         // const {users} = req as {users:any}
-        console.log("==============> DeletedBy" + req.body.users.recordset[0].fullname);
-        res.json({ message: "User deleted successfully", deletedBy: req.body.users.recordset[0].fullname})
+        // console.log("==============> DeletedBy" + req.body.users.recordset[0].fullname);
+        res.json({ message: "User deleted successfully", deletedBy: req.body.users.fullname})
         
     } catch(error: any){
         res.json({ error: error.message })
@@ -139,7 +139,6 @@ export const loginUser : RequestHandler = async(req, res) => {
         .input('email', mssql.VarChar, email)
         .execute('getUsersEmailPsswrd')
         const validatePassword = await bcrypt.compare(password, user.recordset[0].password)
-        // console.log("===========> Reaching here 2");
         if (!validatePassword) {
             return res.json({ message: "Invalid credentials." })
         }
@@ -148,14 +147,15 @@ export const loginUser : RequestHandler = async(req, res) => {
             const{password, ...rest} =  record
             return rest
         })
+
+        // const data = await (await pool.request().query('select id, fullname, email from Users ')).recordset[0]
        
         // used the user as the payload since it runs the same storedProcedure
-        user = user.recordset[0]
+        // user = user.recordset[0]
         // 1st payload, 2nd secretkey & 3rd token
-        const token = jwt.sign(user, process.env.SECRET_KEY as string,  {expiresIn:'10m'})
+        const token = jwt.sign(user.recordset[0], process.env.SECRET_KEY as string, )
 
-        res.json({message:"Logged in successfully",
-            data, token})
+        res.json({message:"Logged in successfully", token})
     } catch (error:any){
         res.json({ error: error.message })
     }
@@ -195,14 +195,7 @@ export const resetPassword : RequestHandler = async (req, res) => {
 }
 
 
-
-
-export const homeActivity: RequestHandler = (req, res) => {
-    console.log("=======>Reaching here7");
-    res.json({ message: "Hello user welcome to the homepage..." })
-}
-
-export const homepage: RequestHandler = (req, res) => {
-    res.json({ message: `Hello user Welcome..` })
+export const homepage = (req:RequestExtended, res:Response) => {
+    res.json({ message: `Hello user ${req.body.users.fullname} Welcome..` })
 
 }
